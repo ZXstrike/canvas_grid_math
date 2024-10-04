@@ -1,19 +1,29 @@
 import 'dart:math';
 
 import 'package:canvas_grid_math/app/question_model.dart';
+import 'package:confetti/confetti.dart';
 import 'package:flutter/material.dart';
 
 class MainPageControlller extends ChangeNotifier {
   double sliderValueY = 1;
   double sliderValueX = 1;
   GlobalKey canvasKey = GlobalKey();
+
+  ConfettiController confettiController = ConfettiController(
+    duration: const Duration(seconds: 1),
+  );
+
   List<List<int>> selectedBox = [];
 
   int healt = 2;
 
   Question? currentQuestion;
 
+  int streak = 0;
+
   bool isTrue = false;
+  bool isFalse = false;
+  bool isAdd = false;
 
   List<Question> questions = [
     Question(value1: 10, value2: 100, type: "fraction"),
@@ -35,23 +45,42 @@ class MainPageControlller extends ChangeNotifier {
 
   void setQuestionRandom() {
     currentQuestion = questions[Random().nextInt(questions.length)];
+    notifyListeners();
   }
 
   void checkAnswer() {
     var isAnswerCorrect = false;
-    if (currentQuestion!.type == "fraction") {
-      isAnswerCorrect = fractionAnswer();
-    } else {
-      isAnswerCorrect = decimalAnswer();
-    }
-    isTrue = isAnswerCorrect;
-    if (!isAnswerCorrect) {
-      healt--;
-      if (healt == 0) {
-        selectNextQuestion();
+    if (selectedBox.isNotEmpty) {
+      if (currentQuestion!.type == "fraction") {
+        isAnswerCorrect = fractionAnswer();
+      } else {
+        isAnswerCorrect = decimalAnswer();
       }
+      isTrue = isAnswerCorrect;
+      if (!isAnswerCorrect) {
+        healt--;
+        isFalse = true;
+        notifyListeners();
+        Future.delayed(const Duration(milliseconds: 500), () {
+          isFalse = false;
+          notifyListeners();
+        });
+        if (healt == 0) {
+          Future.delayed(const Duration(milliseconds: 500), () {
+            streak = 0;
+            selectNextQuestion();
+          });
+        }
+      } else {
+        if (streak < 5) {
+          streak++;
+        }
+        if (streak >= 1) {
+          confettiController.play();
+        }
+      }
+      notifyListeners();
     }
-    notifyListeners();
   }
 
   bool fractionAnswer() {
@@ -71,13 +100,29 @@ class MainPageControlller extends ChangeNotifier {
     return false;
   }
 
-  void getBoxPosition(TapDownDetails details) {
+  void getTapPosition(Offset offset) {
     RenderBox renderBox =
         canvasKey.currentContext!.findRenderObject() as RenderBox;
 
     final renderBoxSize = renderBox.size;
 
-    final localPosition = details.localPosition;
+    final localPosition = offset;
+    final x = (localPosition.dx / (renderBoxSize.width / sliderValueX.toInt()))
+        .floor();
+    final y = (localPosition.dy / (renderBoxSize.height / sliderValueY.toInt()))
+        .floor();
+    isAdd = containtsBox(x, y);
+    selectBox(x, y);
+    notifyListeners();
+  }
+
+  void getDragPosition(Offset offset) {
+    RenderBox renderBox =
+        canvasKey.currentContext!.findRenderObject() as RenderBox;
+
+    final renderBoxSize = renderBox.size;
+
+    final localPosition = offset;
     final x = (localPosition.dx / (renderBoxSize.width / sliderValueX.toInt()))
         .floor();
     final y = (localPosition.dy / (renderBoxSize.height / sliderValueY.toInt()))
@@ -87,12 +132,19 @@ class MainPageControlller extends ChangeNotifier {
   }
 
   void selectBox(int x, int y) {
-    if (x <= sliderValueX && y <= sliderValueY) {
-      if (containtsBox(x, y)) {
-        selectedBox
-            .removeWhere((element) => element[0] == x && element[1] == y);
+    if (x < sliderValueX.toInt() &&
+        y < sliderValueY.toInt() &&
+        x >= 0 &&
+        y >= 0) {
+      if (isAdd) {
+        if (containtsBox(x, y)) {
+          selectedBox
+              .removeWhere((element) => element[0] == x && element[1] == y);
+        }
       } else {
-        selectedBox.add([x, y]);
+        if (!containtsBox(x, y)) {
+          selectedBox.add([x, y]);
+        }
       }
     }
     notifyListeners();

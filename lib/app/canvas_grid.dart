@@ -7,12 +7,14 @@ class CanvasGrid extends StatefulWidget {
     required this.sliderValueX,
     required this.selectedBox,
     required this.selectedColor,
+    required this.isFalse,
   });
 
   final double sliderValueY;
   final double sliderValueX;
   final List<List<int>> selectedBox;
   final Color selectedColor;
+  final bool isFalse;
 
   @override
   State<CanvasGrid> createState() => _CanvasGridState();
@@ -27,6 +29,7 @@ class _CanvasGridState extends State<CanvasGrid> {
         cols: widget.sliderValueX.toInt(),
         selectedBox: widget.selectedBox,
         selectedColor: widget.selectedColor,
+        isFalse: widget.isFalse,
       ),
     );
   }
@@ -37,6 +40,7 @@ class GridPainter extends CustomPainter {
   final int cols;
   final List<List<int>> selectedBox;
   final Color selectedColor;
+  final bool isFalse;
 
   GridPainter({
     super.repaint,
@@ -44,12 +48,13 @@ class GridPainter extends CustomPainter {
     required this.cols,
     required this.selectedBox,
     required this.selectedColor,
+    required this.isFalse,
   });
 
   @override
   void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = Colors.blueGrey
+    var paint = Paint()
+      ..color = isFalse ? Colors.red : Colors.blueGrey
       ..style = PaintingStyle.stroke
       ..strokeWidth = 4;
 
@@ -62,10 +67,8 @@ class GridPainter extends CustomPainter {
           size.height / rows,
         );
 
-        // Draw the grid
         canvas.drawRect(rect, paint);
 
-        // Check if the box is selected and fill it
         if (selectedBox.any((element) => element[0] == j && element[1] == i)) {
           final fillPaint = Paint()
             ..color = selectedColor
